@@ -190,13 +190,14 @@
         <button class="filter" data-genre="other">OTHER</button>
       </div>
 
-      <div class="empty">
-        <h3>THE NEXT WAVE IS COMING.</h3>
-        <p>
-          We're connecting verified event sources.<br>
-          Real events. Real venues. No fake listings.
-        </p>
-      </div>
+      
+<div id="events-list">
+  <div class="empty">
+    <h3>LOADING EVENTS...</h3>
+    <p>Searching the Athens underground.</p>
+  </div>
+</div>
+
     </section>
   </main>
 
@@ -215,6 +216,95 @@
       });
     });
   </script>
+  
+<script>
+  let allEvents = [];
+  let selectedGenre = "all";
+
+  const eventsList = document.getElementById("events-list");
+
+  function renderEvents() {
+    const events = allEvents.filter(event => {
+      if (selectedGenre === "all") return true;
+      return String(event.genre || "").toLowerCase() === selectedGenre;
+    });
+
+    eventsList.replaceChildren();
+
+    if (events.length === 0) {
+      eventsList.innerHTML = `
+        <div class="empty">
+          <h3>THE NEXT WAVE IS COMING.</h3>
+          <p>No upcoming events found yet. Stay tuned.</p>
+        </div>
+      `;
+      return;
+    }
+
+    events.forEach(event => {
+      const card = document.createElement("div");
+      card.className = "empty";
+      card.style.marginBottom = "15px";
+      card.style.textAlign = "left";
+
+      const title = document.createElement("h3");
+      title.textContent = event.title || event.name || "Untitled event";
+
+      const details = document.createElement("p");
+      details.textContent = [
+        event.date,
+        event.venue,
+        event.genre
+      ].filter(Boolean).join(" · ");
+
+      card.append(title, details);
+
+      const url = event.url || event.ticket_url;
+      if (url) {
+        try {
+          const linkUrl = new URL(url, window.location.href);
+          if (["https:", "http:"].includes(linkUrl.protocol)) {
+            const link = document.createElement("a");
+            link.href = linkUrl.href;
+            link.target = "_blank";
+            link.rel = "noopener noreferrer";
+            link.className = "button";
+            link.textContent = "EVENT DETAILS ↗";
+            card.appendChild(link);
+          }
+        } catch (_) {}
+      }
+
+      eventsList.appendChild(card);
+    });
+  }
+
+  document.querySelectorAll(".filter").forEach(button => {
+    button.addEventListener("click", () => {
+      selectedGenre = button.dataset.genre;
+      renderEvents();
+    });
+  });
+
+  fetch("./events.json")
+    .then(response => {
+      if (!response.ok) throw new Error("Events unavailable");
+      return response.json();
+    })
+    .then(data => {
+      allEvents = Array.isArray(data.events) ? data.events : [];
+      renderEvents();
+    })
+    .catch(() => {
+      eventsList.innerHTML = `
+        <div class="empty">
+          <h3>EVENTS UNAVAILABLE</h3>
+          <p>Please try again later.</p>
+        </div>
+      `;
+    });
+</script>
+
 
 </body>
 </html>
